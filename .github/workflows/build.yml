@@ -1,0 +1,31 @@
+name: Build Docker Image
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Build Docker image
+      run: |
+        docker build -t telegram-bot:latest .
+
+    - name: Save Docker image to tar
+      run: |
+        docker save telegram-bot:latest -o telegram-bot.tar
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: telegram-bot-image
+        path: telegram-bot.tar
