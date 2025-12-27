@@ -8,13 +8,11 @@ from config import TOKEN, VERIFY_TIMEOUT
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 用户状态：{user_id: {"verified": bool, "answer": int, "expire": float}}
-user_state = {}
+user_state = {}  # {user_id: {"verified": bool, "answer": int, "expire": float}}
 
 def send_verification(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
 
-    # 生成算术验证码
     a = random.randint(2, 9)
     b = random.randint(2, 9)
     answer = a + b
@@ -35,7 +33,6 @@ def send_verification(update: Update, context: CallbackContext):
 def start(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
 
-    # 已验证用户
     if user_id in user_state and user_state[user_id].get("verified"):
         update.message.reply_text("你已经通过验证，可以正常使用机器人。")
         return
@@ -46,30 +43,25 @@ def handle_message(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     text = (update.message.text or "").strip()
 
-    # 未使用 /start 的用户
     if user_id not in user_state:
         update.message.reply_text("请先发送 /start 开始验证。")
         return
 
     state = user_state[user_id]
 
-    # 已验证用户：执行你的业务逻辑
     if state.get("verified"):
         update.message.reply_text(f"你已验证成功，我收到你的消息：{text}")
         return
 
-    # 未验证用户：检查超时
     if time.time() > state.get("expire", 0):
         update.message.reply_text("验证已超时，请重新发送 /start。")
         del user_state[user_id]
         return
 
-    # 未验证用户：禁止发送链接
     if "http://" in text.lower() or "https://" in text.lower() or "t.me/" in text.lower():
         update.message.reply_text("检测到可疑链接，请先完成验证码验证。")
         return
 
-    # 检查答案
     try:
         user_answer = int(text)
     except ValueError:
@@ -84,6 +76,10 @@ def handle_message(update: Update, context: CallbackContext):
         del user_state[user_id]
 
 def main():
+    if not TOKEN:
+        logger.error("TOKEN 为空，请检查环境变量 BOT_TOKEN 是否设置正确。")
+        return
+
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
 
@@ -91,8 +87,8 @@ def main():
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
     updater.start_polling()
+    logger.info("Bot started polling")
     updater.idle()
 
 if __name__ == "__main__":
     main()
-
