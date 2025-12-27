@@ -1,4 +1,4 @@
-name: Build Docker Image
+name: Build and Push Docker Image
 
 on:
   push:
@@ -13,19 +13,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: Log in to GHCR
+      run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
 
     - name: Build Docker image
       run: |
-        docker build -t telegram-bot:latest .
+        docker build -t ghcr.io/${{ secrets.GHCR_USERNAME }}/telegram-bot:latest .
+        docker tag ghcr.io/${{ secrets.GHCR_USERNAME }}/telegram-bot:latest ghcr.io/${{ secrets.GHCR_USERNAME }}/telegram-bot:1.0.0
 
-    - name: Save Docker image to tar
+    - name: Push Docker image
       run: |
-        docker save telegram-bot:latest -o telegram-bot.tar
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: telegram-bot-image
-        path: telegram-bot.tar
+        docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/telegram-bot:latest
+        docker push ghcr.io/${{ secrets.GHCR_USERNAME }}/telegram-bot:1.0.0
